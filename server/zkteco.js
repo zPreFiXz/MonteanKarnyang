@@ -3,7 +3,11 @@ require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("events").EventEmitter.defaultMaxListeners = 0;
 
 const { PrismaClient } = require("@prisma/client");
-const { startZktecoListener } = require("./zkteco/listener");
+const { startZktecoService } = require("./zkteco/index");
 
 const prisma = new PrismaClient();
-startZktecoListener(prisma);
+
+startZktecoService(prisma).catch((err) => {
+  console.error("Fatal:", err);
+  process.exit(1);
+});

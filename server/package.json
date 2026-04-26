@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"npm:dev:api\" \"npm:dev:zkteco\"",
-    "dev:api": "nodemon server.js",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:zkteco\"",
+    "dev:server": "nodemon server.js",
     "dev:zkteco": "nodemon zkteco.js"
   },
   "prisma": {

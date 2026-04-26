@@ -88,7 +88,7 @@ const RepairSummary = () => {
         } else if (vehicleId) {
           navigate(`/vehicles/${vehicleId}`);
         } else if (origin === "repair-status") {
-          navigate(`/repairs?status=progress`);
+          navigate(`/repairs?status=in-progress`);
         } else {
           navigate(`/repairs/${editRepairId}`);
         }
@@ -96,7 +96,7 @@ const RepairSummary = () => {
         await createRepair(repair);
         toast.success("สร้างรายการซ่อมเรียบร้อยแล้ว");
         const isDesktop = window.innerWidth >= 1280;
-        navigate(isDesktop ? "/" : "/repairs?status=progress");
+        navigate(isDesktop ? "/" : "/repairs?status=in-progress");
       }
     } catch (error) {
       console.log(error);

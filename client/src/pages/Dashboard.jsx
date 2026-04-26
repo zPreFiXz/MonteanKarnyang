@@ -54,12 +54,12 @@ const Dashboard = () => {
   const todaySales = getTodaySales();
 
   // นับการซ่อมตามสถานะ
-  const inProgressCount = getRepairCountByStatus("PROGRESS");
+  const inProgressCount = getRepairCountByStatus("IN_PROGRESS");
   const completedCount = getRepairCountByStatus("COMPLETED");
   const paidCount = getRepairCountByStatus("PAID");
 
   // ดึงรายการซ่อมทั้งหมดตามสถานะ
-  const inProgressRepairs = getRepairsByStatus("PROGRESS");
+  const inProgressRepairs = getRepairsByStatus("IN_PROGRESS");
   const completedRepairs = getRepairsByStatus("COMPLETED");
   const paidRepairs = getRepairsByStatus("PAID");
 
@@ -112,7 +112,7 @@ const Dashboard = () => {
 
           {/* การ์ดสถานะ */}
           <div className="mt-[16px] grid grid-cols-3 gap-[16px]">
-            <Link to="/repairs?status=progress">
+            <Link to="/repairs?status=in-progress">
               <StatusCard
                 bg="progress"
                 icon={Wrench}
@@ -435,7 +435,7 @@ const Dashboard = () => {
           </p>
 
           {/* กำลังซ่อม */}
-          <Link to="/repairs?status=progress">
+          <Link to="/repairs?status=in-progress">
             <CarCard
               bg="progress"
               icon={Wrench}

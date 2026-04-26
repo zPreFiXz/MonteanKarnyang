@@ -474,7 +474,7 @@ exports.updateRepairStatus = async (req, res, next) => {
       data.status = "PAID";
       data.paidAt = new Date();
 
-      if (repair.status === "PROGRESS" && !repair.completedAt) {
+      if (repair.status === "IN_PROGRESS" && !repair.completedAt) {
         data.completedAt = new Date();
       }
 

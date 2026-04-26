@@ -1,69 +1,19 @@
-const { CONFIG, TELEGRAM_TEXT_LIMIT } = require("./config");
+const config = require("./config");
 
-const ERROR_CODE_MAP = {
-  ENOTFOUND: { type: "dns", message: "DNS resolution failed" },
-  ECONNREFUSED: { type: "connection", message: "connection refused" },
-  ECONNRESET: { type: "network", message: "connection reset" },
-};
+const MAX_RETRIES = 1;
 
-const classifyTelegramError = (error) => {
-  if (error?.name === "AbortError") {
-    return {
-      type: "timeout",
-      message: `request timeout (${CONFIG.telegramRequestTimeoutMs}ms)`,
-    };
-  }
+const NETWORK_ERROR_CODES = new Set(["ENOTFOUND", "ECONNREFUSED", "ECONNRESET"]);
 
-  if (ERROR_CODE_MAP[error?.code]) return ERROR_CODE_MAP[error.code];
+const isRetryable = (error) =>
+  error?.name === "AbortError" || NETWORK_ERROR_CODES.has(error?.code);
 
-  const message = String(error?.message || error);
-  if (message.includes("fetch") || message.includes("network")) {
-    return { type: "network", message };
-  }
-
-  return { type: "unknown", message };
-};
-
-const splitTelegramMessageText = (text) => {
-  if (!text) return ["-"];
-  if (text.length <= TELEGRAM_TEXT_LIMIT) return [text];
-
-  const chunks = [];
-  let current = "";
-
-  for (const line of text.split("\n")) {
-    const candidate = current ? `${current}\n${line}` : line;
-    if (candidate.length <= TELEGRAM_TEXT_LIMIT) {
-      current = candidate;
-      continue;
-    }
-
-    if (current) chunks.push(current);
-    if (line.length <= TELEGRAM_TEXT_LIMIT) {
-      current = line;
-      continue;
-    }
-
-    for (let index = 0; index < line.length; index += TELEGRAM_TEXT_LIMIT) {
-      chunks.push(line.slice(index, index + TELEGRAM_TEXT_LIMIT));
-    }
-    current = "";
-  }
-
-  if (current) chunks.push(current);
-  return chunks.length ? chunks : ["-"];
-};
-
-const sendTelegramMessageToChat = async (chatId, text, attempt = 1) => {
+const sendToChat = async (chatId, text, attempt = 0) => {
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    CONFIG.telegramRequestTimeoutMs,
-  );
+  const timer = setTimeout(() => controller.abort(), config.telegram.requestTimeoutMs);
 
   try {
-    const response = await fetch(
-      `https://api.telegram.org/bot${CONFIG.telegramBotToken}/sendMessage`,
+    const res = await fetch(
+      `https://api.telegram.org/bot${config.telegram.botToken}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,63 +22,80 @@ const sendTelegramMessageToChat = async (chatId, text, attempt = 1) => {
       },
     );
 
-    clearTimeout(timeout);
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`HTTP ${response.status}: ${body.substring(0, 200)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
     }
   } catch (error) {
-    const detail = classifyTelegramError(error);
-    if (attempt < 2 && ["timeout", "network"].includes(detail.type)) {
-      console.warn(
-        `Telegram retry [${chatId}] attempt ${attempt}: ${detail.type} - ${detail.message}`,
-      );
-      return sendTelegramMessageToChat(chatId, text, attempt + 1);
+    if (attempt < MAX_RETRIES && isRetryable(error)) {
+      return sendToChat(chatId, text, attempt + 1);
     }
-
-    throw new Error(`[${chatId}] ${detail.type}: ${detail.message}`);
+    throw error;
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timer);
   }
 };
 
-const normalizeMessageText = (message) =>
-  typeof message === "string"
-    ? message
-    : message == null
-      ? ""
-      : JSON.stringify(message);
+const splitText = (text) => {
+  const limit = config.telegram.textLimit;
+  if (!text) return ["-"];
+  if (text.length <= limit) return [text];
 
-const sendTelegramMessage = async (message) => {
-  if (!CONFIG.telegramBotToken || !CONFIG.telegramChatIds.length) {
-    console.warn(
-      "Skip Telegram send: missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_IDS",
-    );
+  const chunks = [];
+  let current = "";
+
+  for (const line of text.split("\n")) {
+    const next = current ? `${current}\n${line}` : line;
+
+    if (next.length <= limit) {
+      current = next;
+      continue;
+    }
+
+    if (current) chunks.push(current);
+
+    if (line.length <= limit) {
+      current = line;
+    } else {
+      for (let i = 0; i < line.length; i += limit) {
+        chunks.push(line.slice(i, i + limit));
+      }
+      current = "";
+    }
+  }
+
+  if (current) chunks.push(current);
+  return chunks.length ? chunks : ["-"];
+};
+
+const send = async (message) => {
+  const { botToken, chatIds } = config.telegram;
+
+  if (!botToken || !chatIds.length) {
+    console.warn("Skipped: Missing BOT_TOKEN or CHAT_IDS");
     return;
   }
 
-  const chunks = splitTelegramMessageText(normalizeMessageText(message));
+  const text = typeof message === "string" ? message : JSON.stringify(message) ?? "";
+  const chunks = splitText(text);
+
   const results = await Promise.allSettled(
-    CONFIG.telegramChatIds.map(async (chatId) => {
+    chatIds.map(async (chatId) => {
       for (const chunk of chunks) {
-        await sendTelegramMessageToChat(chatId, chunk);
+        await sendToChat(chatId, chunk);
       }
     }),
   );
 
   const failures = results
-    .filter((result) => result.status === "rejected")
-    .map((result) => result.reason?.message || String(result.reason));
+    .filter((r) => r.status === "rejected")
+    .map((r) => r.reason?.message || String(r.reason));
 
   if (failures.length) {
-    const totalTargets = CONFIG.telegramChatIds.length;
-    const successCount = totalTargets - failures.length;
-    const errorMsg = `Telegram send failed (${successCount}/${totalTargets} ok): ${failures.join(" | ")}`;
-    console.error(errorMsg);
-    throw new Error(errorMsg);
+    const msg = `Send failed (${chatIds.length - failures.length}/${chatIds.length} succeeded): ${failures.join(" | ")}`;
+    console.error(msg);
+    throw new Error(msg);
   }
 };
 
-module.exports = {
-  sendTelegramMessage,
-};
+module.exports = { send };

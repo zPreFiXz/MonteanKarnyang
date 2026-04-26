@@ -19,7 +19,7 @@ const getDisplayBrand = (vehicleBrand) => {
 const RepairStatus = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const status = searchParams.get("status") || "progress";
+  const status = searchParams.get("status") || "in-progress";
   const [repairs, setRepairs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,7 +68,7 @@ const RepairStatus = () => {
 
   const getStatusTitle = () => {
     switch (status) {
-      case "progress":
+      case "in-progress":
         return "รายการกำลังซ่อม";
       case "completed":
         return "รายการซ่อมเสร็จสิ้น";
@@ -82,7 +82,7 @@ const RepairStatus = () => {
   const getStatusColor = (repairStatus) => {
     const status = repairStatus?.toLowerCase().replace("_", "-");
     switch (status) {
-      case "progress":
+      case "in-progress":
         return "#ffb000";
       case "completed":
         return "#22c55e";
@@ -96,7 +96,7 @@ const RepairStatus = () => {
   const getStatusBg = (repairStatus) => {
     const status = repairStatus?.toLowerCase().replace("_", "-");
     switch (status) {
-      case "progress":
+      case "in-progress":
         return "progress";
       case "completed":
         return "completed";
@@ -109,7 +109,7 @@ const RepairStatus = () => {
 
   const getEmptyMessage = () => {
     switch (status) {
-      case "progress":
+      case "in-progress":
         return "ไม่มีรายการที่กำลังซ่อม";
       case "completed":
         return "ไม่มีรายการที่ซ่อมเสร็จสิ้น";
@@ -135,9 +135,9 @@ const RepairStatus = () => {
       </div>
       <div className="mx-[20px] mt-[16px] flex justify-center gap-[16px]">
         <Link
-          to="/repairs?status=progress"
+          to="/repairs?status=in-progress"
           className={`flex h-[45px] w-[106px] items-center justify-center rounded-[10px] border-2 text-[18px] font-semibold duration-300 md:w-[120px] md:text-[20px] ${
-            status === "progress"
+            status === "in-progress"
               ? "text-surface bg-status-progress border-white"
               : "border-subtle-light text-subtle-light bg-surface"
           }`}
