@@ -1,7 +1,7 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
 const createError = require("../utils/createError");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 exports.login = async (req, res, next) => {
   try {
@@ -17,7 +17,7 @@ exports.login = async (req, res, next) => {
       createError(400, "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     }
 
-    const checkPassword = bcrypt.compareSync(password, user.passwordHash);
+    const checkPassword = bcrypt.compareSync(password, user.password);
 
     if (!checkPassword) {
       createError(400, "อีเมลหรือรหัสผ่านไม่ถูกต้อง");

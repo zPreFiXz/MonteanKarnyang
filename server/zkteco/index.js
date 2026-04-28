@@ -86,7 +86,8 @@ const startZktecoService = async (prisma) => {
       }
     } catch (err) {
       if (err.message === "FETCH_TIMEOUT") {
-        console.warn(`Fetch timeout (>${deviceCfg.fetchTimeoutMs}ms)`);
+        console.warn(`Fetch timeout (>${deviceCfg.fetchTimeoutMs}ms) — reconnecting`);
+        scheduleReconnect("FETCH_TIMEOUT");
       } else {
         console.error("Polling:", err.message);
         scheduleReconnect(err.message);

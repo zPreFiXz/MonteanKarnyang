@@ -1,6 +1,6 @@
-const bcrypt = require("bcryptjs");
 const prisma = require("../config/prisma");
 const createError = require("../utils/createError");
+const bcrypt = require("bcryptjs");
 
 exports.getUsers = async (req, res, next) => {
   try {
@@ -33,20 +33,20 @@ exports.createUser = async (req, res, next) => {
       dateOfBirth,
     } = req.body;
 
-    const existingUser = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (existingUser) {
+    if (user) {
       createError(400, "อีเมลนี้มีอยู่ในระบบแล้ว");
     }
 
-    const hashedPassword = bcrypt.hashSync(password, 10);
+    const hashPassword = bcrypt.hashSync(password, 10);
 
     await prisma.user.create({
       data: {
         email,
-        passwordHash: hashedPassword,
+        password: hashPassword,
         fullName,
         nickname,
         role,
@@ -74,15 +74,15 @@ exports.updateUser = async (req, res, next) => {
       password,
     } = req.body;
 
-    const existingUser = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: Number(id) },
     });
 
-    if (!existingUser) {
+    if (!user) {
       createError(404, "ไม่พบบัญชีผู้ใช้งาน");
     }
 
-    if (email && email !== existingUser.email) {
+    if (email && email !== user.email) {
       const emailExists = await prisma.user.findUnique({
         where: { email },
       });
@@ -108,7 +108,7 @@ exports.updateUser = async (req, res, next) => {
     if (dateOfBirth) updateData.dateOfBirth = new Date(dateOfBirth);
 
     if (password) {
-      updateData.passwordHash = bcrypt.hashSync(password, 10);
+      updateData.password = bcrypt.hashSync(password, 10);
     }
 
     await prisma.user.update({

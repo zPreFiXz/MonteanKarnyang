@@ -4,9 +4,9 @@ const config = {
     port: Number(process.env.ZKTECO_DEVICE_PORT || 4370),
     socketTimeoutMs: 10_000,
     inportTimeoutMs: 4_000,
-    pollIntervalMs: 5_000,
-    fetchTimeoutMs: 15_000,
-    reconnectDelayMs: 5_000,
+    pollIntervalMs: 30_000,
+    fetchTimeoutMs: 20_000,
+    reconnectDelayMs: 10_000,
     dedupeWindowMs: 2 * 60 * 1_000,
   },
 

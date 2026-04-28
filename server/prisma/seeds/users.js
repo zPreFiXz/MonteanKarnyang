@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 exports.users = [
   {
     email: process.env.ADMIN_EMAIL,
-    passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10),
+    password: bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10),
     role: "ADMIN",
     fullName: "มณเฑียรการยาง",
     nickname: "แอดมิน",
